@@ -261,8 +261,8 @@ def update_progress(i):
 def logout():
     session.clear()
         return redirect("/")
-__name__ == "__main__":
-    import os
+__naif__name__i__name__ == "_ import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
