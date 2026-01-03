@@ -15,7 +15,8 @@ def hash_pw(p):
     return hashlib.sha256(p.encode()).hexdigest()
 
 def init_db():
-    c = db(); cur = c.cursor()
+    c = db()
+    cur = c.cursor()
     cur.execute("""
     CREATE TABLE IF NOT EXISTS users(
         username TEXT PRIMARY KEY,
@@ -51,7 +52,8 @@ def init_db():
     for u,p,r,n in users:
         cur.execute("INSERT OR IGNORE INTO users VALUES (?,?,?,?)",
             (u,hash_pw(p),r,n))
-    c.commit(); c.close()
+    c.commit()
+    c.close()
 
 # ================= HTML =================
 LOGIN_HTML = """
@@ -282,6 +284,3 @@ if __name__=="__main__":
     init_db()
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
-
-
