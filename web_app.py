@@ -260,11 +260,9 @@ def update_progress(i):
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect("/")
-
-if
-
-if __name__ == "__main__":
+        return redirect("/")
+__name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
