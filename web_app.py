@@ -1,12 +1,13 @@
-from flask import Flask, render_template_string, request, redirect, url_for, session
+from flask import Flask, render_template_string, request, redirect, session
 import sqlite3, hashlib
 from datetime import datetime
+import os
 
 app = Flask(__name__)
 app.secret_key = "daily-work-secret"
 DB = "daily_work.db"
 
-# ================= DB =================
+# ================= DATABASE =================
 def db():
     return sqlite3.connect(DB)
 
@@ -15,7 +16,6 @@ def hash_pw(p):
 
 def init_db():
     c = db(); cur = c.cursor()
-
     cur.execute("""
     CREATE TABLE IF NOT EXISTS users(
         username TEXT PRIMARY KEY,
@@ -23,7 +23,6 @@ def init_db():
         role TEXT,
         name TEXT
     )""")
-
     cur.execute("""
     CREATE TABLE IF NOT EXISTS tasks(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,10 +37,10 @@ def init_db():
         created_at TEXT,
         updated_at TEXT
     )""")
-
+    # default admin
     cur.execute("INSERT OR IGNORE INTO users VALUES (?,?,?,?)",
         ("admin", hash_pw("3624"), "admin", "System Admin"))
-
+    # default users
     users = [
         ("45213","45213","engineer","Engr. Sadid Hossain"),
         ("41053","41053","engineer","Engr. Enamul Haque"),
@@ -49,11 +48,9 @@ def init_db():
         ("19359","19359","officer","Papon Chandra Das"),
         ("6810","6810","technician","Selim"),
     ]
-
     for u,p,r,n in users:
         cur.execute("INSERT OR IGNORE INTO users VALUES (?,?,?,?)",
             (u,hash_pw(p),r,n))
-
     c.commit(); c.close()
 
 # ================= HTML =================
@@ -209,31 +206,47 @@ def dashboard():
     if "u" not in session: return redirect("/")
     r,n=session["r"],session["n"]
     c=db();cur=c.cursor()
-
     if r=="admin": cur.execute("SELECT * FROM tasks")
     else: cur.execute("SELECT * FROM tasks WHERE engineer=? OR officer=? OR technician=?",(n,n,n))
     tasks=cur.fetchall()
-
     cur.execute("SELECT * FROM users"); users=cur.fetchall()
     cur.execute("SELECT name FROM users WHERE role='officer'"); officers=[i[0] for i in cur.fetchall()]
     cur.execute("SELECT name FROM users WHERE role='technician'"); technicians=[i[0] for i in cur.fetchall()]
     c.close()
-
     return render_template_string(DASH_HTML,role=r,name=n,users=users,tasks=tasks,officers=officers,technicians=technicians)
 
+# ================= ADMIN =================
+@app.route("/create_user",methods=["POST"])
+def create_user():
+    if session.get("r")!="admin": return redirect("/dashboard")
+    c=db();cur=c.cursor()
+    cur.execute("INSERT OR IGNORE INTO users VALUES (?,?,?,?)",
+        (request.form["username"],hash_pw(request.form["password"]),request.form["role"],request.form["name"]))
+    c.commit();c.close()
+    return redirect("/dashboard")
+
+@app.route("/delete_user/<u>",methods=["POST"])
+def delete_user(u):
+    if session.get("r")!="admin" or u=="admin": return redirect("/dashboard")
+    c=db();cur=c.cursor()
+    cur.execute("DELETE FROM users WHERE username=?",(u,))
+    c.commit();c.close()
+    return redirect("/dashboard")
+
+# ================= ENGINEER =================
 @app.route("/add_task",methods=["POST"])
 def add_task():
-    if session["r"]!="engineer": return redirect("/dashboard")
+    if session.get("r")!="engineer": return redirect("/dashboard")
     now=datetime.now().strftime("%d-%b-%Y %I:%M %p")
     c=db();cur=c.cursor()
     cur.execute("""
     INSERT INTO tasks(title,model,urgency,engineer,officer,status,created_at,updated_at)
     VALUES (?,?,?,?,?,?,?,?)
-    """,(request.form["title"],request.form["model"],request.form["urgency"],
-         session["n"],request.form["officer"],"Pending",now,now))
+    """,(request.form["title"],request.form["model"],request.form["urgency"],session["n"],request.form["officer"],"Pending",now,now))
     c.commit();c.close()
     return redirect("/dashboard")
 
+# ================= OFFICER =================
 @app.route("/assign_tech/<int:i>",methods=["POST"])
 def assign_tech(i):
     c=db();cur=c.cursor()
@@ -248,6 +261,7 @@ def update_status(i,s):
     c.commit();c.close()
     return redirect("/dashboard")
 
+# ================= TECHNICIAN =================
 @app.route("/update_progress/<int:i>",methods=["POST"])
 def update_progress(i):
     p=int(request.form["progress"])
@@ -257,12 +271,17 @@ def update_progress(i):
     c.commit();c.close()
     return redirect("/dashboard")
 
+# ================= LOGOUT =================
 @app.route("/logout")
 def logout():
     session.clear()
-        return redirect("/")
-__naif__name__i__name__ == "_ import os
+    return redirect("/")
+
+# ================= RUN =================
+if __name__=="__main__":
+    init_db()
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
