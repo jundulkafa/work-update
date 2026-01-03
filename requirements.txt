@@ -1,4 +1,1 @@
 Flask==2.3.2
-git add requirements.txt web_app.py
-git commit -m "Prepare for Render deploy: add requirements and port fix"
-git push
